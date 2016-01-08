@@ -2,7 +2,7 @@
 
 namespace Recca0120\Support\Filesystem;
 
-use File;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection as BaseCollection;
@@ -11,16 +11,19 @@ class Collection extends BaseCollection
 {
     protected $directory = null;
 
-    public function __construct($items = [], $directory = null)
+    protected $filesystem;
+
+    public function __construct($items = [], $directory = null, Filesystem $filesystem = null)
     {
+        $this->filesystem = ($filesystem === null) ? new Filesystem() : $filesystem;
         if ($directory !== null) {
-            // $items = collect(File::files($directory))->map(function ($item) {
+            // $items = collect($this->filesystem->files($directory))->map(function ($item) {
             //     return $this->parseFile($item);
             // })->sortByDesc(function ($item) {
             //     return $item['filectime'];
             // });
             $items = [];
-            foreach (File::files($directory) as $file) {
+            foreach ($this->filesystem->files($directory) as $file) {
                 $items[] = $this->parseFile($file);
             }
             $this->directory = $directory;
@@ -35,8 +38,8 @@ class Collection extends BaseCollection
 
     public function getDirectory()
     {
-        if (File::isDirectory($this->directory) === false) {
-            File::makeDirectory($this->directory, 0755, true);
+        if ($this->filesystem->isDirectory($this->directory) === false) {
+            $this->filesystem->makeDirectory($this->directory, 0755, true);
         }
 
         return trim($this->directory, '/').'/';
@@ -66,6 +69,6 @@ class Collection extends BaseCollection
 
     public function delete($id)
     {
-        return File::delete($this->keyBy('id')->get($id)->path);
+        return $this->filesystem->delete($this->keyBy('id')->get($id)->path);
     }
 }
