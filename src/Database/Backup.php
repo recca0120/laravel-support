@@ -1,22 +1,38 @@
 <?php
 
-namespace Recca0120\Support\Filesystem;
+namespace Recca0120\Support\Database;
 
 use Carbon\Carbon;
-use DB;
 use Ifsnop\Mysqldump\Mysqldump;
+use Illuminate\Contracts\Config\Repository as RepositoryContract;
+use Illuminate\Database\Connection;
+use Recca0120\Support\Filesystem\Fluent;
 
-class DbBackup extends Collection
+class Backup
 {
-    public function save(array $options = [])
+    private $dsn;
+
+    private $username;
+
+    private $password;
+
+    public function __construct(Connection $connection, RepositoryContract $config)
     {
-        $config = config('database.connections.'.DB::getName());
-        $dsn = static::parseDSN($config);
-        $compress = Mysqldump::GZIP;
+        $dbconfig = $config->get('database.connections.'.$connection->getName());
+        $this->dsn = static::parseDSN($dbconfig);
+        $this->username = $dbconfig['username'];
+        $this->password = $dbconfig['password'];
+    }
+
+    public function dump($directory, array $options = [])
+    {
+        $directory = rtrim($directory, '/').'/';
+        $compress = array_get($options, 'compress', Mysqldump::GZIP);
         if (function_exists('gzopen') === false && $compress === Mysqldump::GZIP) {
             $compress = Mysqldump::NONE;
         }
         $filename = sprintf('sqldump-%s.sql', Carbon::now()->format('YmdHis'));
+
         switch ($compress) {
             case Mysqldump::GZIP:
                 $filename .= '.gz';
@@ -25,13 +41,14 @@ class DbBackup extends Collection
                 $filename .= '.bz2';
                 break;
         }
-        $dumpper = new Mysqldump($dsn, $config['username'], $config['password'], [
+        $dumpper = new Mysqldump($this->dsn, $this->username, $this->password, [
             'compress'           => $compress,
             'single-transaction' => false,
         ]);
-        $dumpper->start($this->getDirectory().$filename);
 
-        return true;
+        $dumpper->start($directory.$filename);
+
+        return new Fluent($directory.$filename);
     }
 
     public static function parseDSN(array $params)
