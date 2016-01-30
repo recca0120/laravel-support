@@ -26,7 +26,7 @@ class Backup
     public function dump($directory, array $options = [])
     {
         $directory = trim($directory, '/').'/';
-        $compress = Mysqldump::GZIP;
+        $compress = array_get($options, 'compress', Mysqldump::GZIP);
         if (function_exists('gzopen') === false && $compress === Mysqldump::GZIP) {
             $compress = Mysqldump::NONE;
         }
