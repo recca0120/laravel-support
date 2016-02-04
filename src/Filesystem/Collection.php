@@ -69,6 +69,6 @@ class Collection extends BaseCollection
 
     public function delete($id)
     {
-        return $this->filesystem->delete($this->keyBy('id')->get($id)->path);
+        return $this->filesystem->delete($this->keyBy('id')->get($id)->getPathname());
     }
 }
